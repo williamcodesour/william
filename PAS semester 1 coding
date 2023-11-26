@@ -1,0 +1,127 @@
+rom telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CommandHandler, MessageHandler, Application, filters, CallbackQueryHandler
+import random
+from youtubesearchpython import VideosSearch
+
+TOKEN = "6731673546:AAG5aLgwfCVFYXkHO7V7uDrDc0UKw8nlm64"
+BOT_USERNAME = "Omaaaaaga_bot"
+
+async def start_command(update: Update, context):
+    keyboard = [
+    [InlineKeyboardButton("Menu", callback_data='/menu')],
+    [InlineKeyboardButton("About", callback_data='/about')],
+    [InlineKeyboardButton("Contact", callback_data='/contact')],
+]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Hello! Thanks for chatting with me! I am an Omaaaaaga_Bot !', reply_markup=reply_markup)
+    
+
+async def help_command(update: Update, context):
+    await update.message.reply_text('I am an Omaaaaaga_Bot! Please type something so I can respond!')
+
+async def menu_command(update: Update, context):
+    await update.message.reply_text('Open the menu!')
+
+async def about_command(update: Update, context):
+    await update.message.reply_text('About Omaaaaaga_Bot:\nThis is a simple Telegram bot created by william.')
+
+async def contact_command(update: Update, context):
+    await update.message.reply_text('Contact us:\nYou can reach us at contact@Omaaaaaga_Bot')
+
+async def webstore_command(update: Update, context):
+    await update.message.reply_text("Welcome to our store!\nyou can open our store by this link!\nhttps://www.william.my.id/store")
+
+async def roll_dice_command(update: Update, context):
+    dice_result = random.randint(1, 6)
+    emoji_dice = '🎲'
+    await update.message.reply_text(f'{emoji_dice} You rolled a {dice_result}! {emoji_dice}')
+
+async def youtube_search_command(update: Update, context):
+    if context.args:
+        query = ' '.join(context.args)
+        video_search = VideosSearch(query, limit=1)
+        results = video_search.result()
+
+        if results and 'result' in results and results['result']:
+            video_url = results['result'][0]['link']
+            await update.message.reply_text(f'Here is the first result for "{query}":\n{video_url}')
+        else:
+            await update.message.reply_text(f'Sorry, no results found for "{query}" on YouTube.')
+    else:
+        await update.message.reply_text('Please provide a search query for YouTube.')
+
+# Responses
+def handle_response(text: str):
+    processed: str = text.lower()
+    if 'hello' in processed:
+        return 'Hey there!'
+    
+    if 'how are you' in processed:
+        return 'I am good!'
+    
+    if 'i love python' in processed:
+        return 'I love Python too!'
+    
+    return 'I do not understand what you wrote...'
+
+async def handle_message(update: Update, context):
+    message_type: str = update.message.chat.type
+    text: str = update.message.text
+    
+    print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
+    
+    if message_type == 'group':
+        if BOT_USERNAME in text:
+            new_text: str = text.replace(BOT_USERNAME, '').strip()
+            response: str = handle_response(new_text)
+        else:
+            return
+    else:
+        response: str = handle_response(text)
+        
+    print('Bot:', response)
+    await update.message.reply_text(response)
+
+async def error(update: Update, context):
+    print(f'Update {update} caused error {context.error}')
+
+async def button_callback(update: Update, context):
+    query = update.callback_query
+    data = query.data
+
+    if data == 'menu':
+        await menu_command(update, context)
+    elif data == 'about':
+        await about_command(update, context)
+    elif data == 'contact':
+        await contact_command(update, context)
+
+# ... (previous code remains unchanged)
+
+if _name_ == '_main_':
+    print('Bot is starting...')
+    app = Application.builder().token(TOKEN).build()
+
+    # Commands
+    app.add_handler(CommandHandler('start', start_command))
+    app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('menu', menu_command))
+    app.add_handler(CommandHandler('about', about_command))
+    app.add_handler(CommandHandler('contact', contact_command))
+    app.add_handler(CommandHandler('store', webstore_command))
+    app.add_handler(CommandHandler('dice', roll_dice_command))
+    app.add_handler(CommandHandler('youtube', youtube_search_command))
+
+    # Callbacks for button clicks
+    app.add_handler(CallbackQueryHandler(button_callback, pattern='^menu$|^about$|^contact$'))
+
+    # Messages
+    app.add_handler(MessageHandler(filters.TEXT, handle_message))
+
+    # Error
+    app.add_error_handler(error)
+
+    # Polls the bot
+    print('Polling...')
+    app.run_polling(poll_interval=3)
